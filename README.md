@@ -23,3 +23,10 @@ Here is what came back from a search to compile rust for a raspberry pi.
 
 
 But this doesn't help keep getting `linking with 'cc' failed: exit status: 1` problems with a `collect2: error: ld returned 1 exit status` ending. So it looks like I have the wrong tool chain? So do I need to just get a docker image to do the compiling for a Pi... More complex than I would like.
+
+Ok... I looked docker builds and https://kerkour.com/rust-reproducible-cross-compilation-with-docker and
+I was working through it and then I saw the marvelous cross...
+
+> cargo install -f cross
+>
+> cross build --target aarch64-unknown-linux-gnu

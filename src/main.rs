@@ -1,6 +1,7 @@
-use std::fs::{read_dir, DirEntry, create_dir_all};
+use std::env;
+use std::fs::{read_dir, DirEntry, create_dir_all, copy};
 use std::os::unix::fs::symlink;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 fn check_dir(root: &str,entry: DirEntry, src_dir: &str, dst_dir: &str) {
     let sub_dir = Path::new(src_dir).join(entry.file_name());
@@ -13,6 +14,13 @@ fn check_dir(root: &str,entry: DirEntry, src_dir: &str, dst_dir: &str) {
             _ => todo!(),
         }
     }
+}
+
+fn copy_instead() -> bool {
+    if let Some(arg1) = env::args().nth(1) {
+        return arg1.contains("--copy");
+    }
+    return false;
 }
 
 fn dir_process(root: &str,entry: DirEntry, src_dir: &str, dst_dir: &str) {
@@ -55,6 +63,28 @@ fn dir_process(root: &str,entry: DirEntry, src_dir: &str, dst_dir: &str) {
     }    
     let dst_path = Path::new(dst_path).join(entry.file_name());
     print!("File found {} ", name);
+    file_action(src_path, dst_path, dst_dir,root);
+}
+
+fn file_copy(src_path: &PathBuf, dst_path: PathBuf, dst_dir: &str, root: &str){
+    let r = copy(&src_path, dst_path);
+    if r.is_err() {
+        let err = r.unwrap_err();
+        match err.kind() {
+            std::io::ErrorKind::AlreadyExists => println!("and file already there"),
+            _ => todo!(),
+        }
+        return;
+    } 
+    println!("and copied file in {}/{} dir",dst_dir,root);
+
+}
+
+fn file_action(src_path: &PathBuf, dst_path: PathBuf, dst_dir: &str, root: &str) {
+    if copy_instead(){
+        file_copy(src_path, dst_path, dst_dir, root);
+        return;
+    }
     let r = symlink(&src_path, dst_path);
     if r.is_err() {
         let err = r.unwrap_err();
@@ -62,9 +92,10 @@ fn dir_process(root: &str,entry: DirEntry, src_dir: &str, dst_dir: &str) {
             std::io::ErrorKind::AlreadyExists => println!("and symbolic link already there"),
             _ => todo!(),
         }
-    } else {
-        println!("and added symbolic link in {}/{} dir",dst_dir,root);
-    }
+        return;
+    } 
+    println!("and added symbolic link in {}/{} dir",dst_dir,root);
+    
 }
 
 fn dir_walk(current_route: &str, src_dir: &str, dst_dir: &str) -> std::io::Result<()> {
@@ -90,8 +121,11 @@ fn dir_walk(current_route: &str, src_dir: &str, dst_dir: &str) -> std::io::Resul
 }
 
 fn main() -> std::io::Result<()> {
-    let src_dir = "/home/mick/Pictures/years/";
-    let dst_dir = "sorted";
+
+    // @TODO use params? https://docs.rs/clap/latest/clap/ and have switch to copy,
+    //       rather than symlink
+    let src_dir = "/mnt/drive/backup/pictures/years/";
+    let dst_dir = "/mnt/drive/backup/pictures/sorted";
 
     println!("Welcome to picture sort");
 

@@ -1,3 +1,8 @@
 /target
 sorted
 Cargo.lock
+send.sh
+Dockerfile
+Dockerfile.aarch64
+fixDocker.sh
+psort
