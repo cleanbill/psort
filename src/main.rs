@@ -1,12 +1,12 @@
 use std::env;
-use std::fs::{read_dir, DirEntry, create_dir_all, copy};
+use std::fs::{ read_dir, DirEntry, create_dir_all, copy };
 use std::os::unix::fs::symlink;
-use std::path::{Path, PathBuf};
+use std::path::{ Path, PathBuf };
 
-fn check_dir(root: &str,entry: DirEntry, src_dir: &str, dst_dir: &str) {
+fn check_dir(root: &str, entry: DirEntry, src_dir: &str, dst_dir: &str) {
     let sub_dir = Path::new(src_dir).join(entry.file_name());
     let new_src_dir = sub_dir.into_os_string().into_string().unwrap();
-    let r = dir_walk(root,&new_src_dir, &dst_dir);
+    let r = dir_walk(root, &new_src_dir, &dst_dir);
     if r.is_err() {
         let err = r.unwrap_err();
         match err.kind() {
@@ -23,14 +23,9 @@ fn copy_instead() -> bool {
     return false;
 }
 
-fn dir_process(root: &str,entry: DirEntry, src_dir: &str, dst_dir: &str) {
+fn dir_process(root: &str, entry: DirEntry, src_dir: &str, dst_dir: &str) {
     let src_path = &entry.path();
-    let name = entry
-        .path()
-        .file_name()
-        .unwrap()
-        .to_string_lossy()
-        .into_owned();
+    let name = entry.path().file_name().unwrap().to_string_lossy().into_owned();
 
     let typ = entry.file_type();
     if typ.is_err() {
@@ -43,7 +38,7 @@ fn dir_process(root: &str,entry: DirEntry, src_dir: &str, dst_dir: &str) {
     }
     let is_dir = typ.unwrap().is_dir();
     if is_dir {
-        check_dir(root,entry, src_dir, dst_dir);
+        check_dir(root, entry, src_dir, dst_dir);
         return;
     }
     if !src_dir.contains("_picked") {
@@ -58,15 +53,19 @@ fn dir_process(root: &str,entry: DirEntry, src_dir: &str, dst_dir: &str) {
         let err = cra.unwrap_err();
         match err.kind() {
             std::io::ErrorKind::AlreadyExists => println!("Dir already there"),
-            _ => print!("{}",err),
+            _ => print!("{}", err),
         }
-    }    
+    }
     let dst_path = Path::new(dst_path).join(entry.file_name());
     print!("File found {} ", name);
-    file_action(src_path, dst_path, dst_dir,root);
+    file_action(src_path, dst_path, dst_dir, root);
 }
 
-fn file_copy(src_path: &PathBuf, dst_path: PathBuf, dst_dir: &str, root: &str){
+fn file_copy(src_path: &PathBuf, dst_path: PathBuf, dst_dir: &str, root: &str) {
+    if Path::new(&dst_path).exists() {
+        println!("file already exists in {}/{} dir", dst_dir, root);
+        return;
+    }
     let r = copy(&src_path, dst_path);
     if r.is_err() {
         let err = r.unwrap_err();
@@ -75,13 +74,12 @@ fn file_copy(src_path: &PathBuf, dst_path: PathBuf, dst_dir: &str, root: &str){
             _ => todo!(),
         }
         return;
-    } 
-    println!("and copied file in {}/{} dir",dst_dir,root);
-
+    }
+    println!("and copied file in {}/{} dir", dst_dir, root);
 }
 
 fn file_action(src_path: &PathBuf, dst_path: PathBuf, dst_dir: &str, root: &str) {
-    if copy_instead(){
+    if copy_instead() {
         file_copy(src_path, dst_path, dst_dir, root);
         return;
     }
@@ -93,9 +91,8 @@ fn file_action(src_path: &PathBuf, dst_path: PathBuf, dst_dir: &str, root: &str)
             _ => todo!(),
         }
         return;
-    } 
-    println!("and added symbolic link in {}/{} dir",dst_dir,root);
-    
+    }
+    println!("and added symbolic link in {}/{} dir", dst_dir, root);
 }
 
 fn dir_walk(current_route: &str, src_dir: &str, dst_dir: &str) -> std::io::Result<()> {
@@ -105,23 +102,17 @@ fn dir_walk(current_route: &str, src_dir: &str, dst_dir: &str) -> std::io::Resul
 
     for entry in read_dir(&src_dir).unwrap() {
         let entry = entry?;
-        let root = entry
-        .path()
-        .file_name()
-        .unwrap()
-        .to_string_lossy()
-        .into_owned();
-         if current_route.len() == 0 {
+        let root = entry.path().file_name().unwrap().to_string_lossy().into_owned();
+        if current_route.len() == 0 {
             dir_process(&root, entry, src_dir, dst_dir);
-         } else {
+        } else {
             dir_process(&current_route, entry, src_dir, dst_dir);
-         }
+        }
     }
     return Ok(());
 }
 
 fn main() -> std::io::Result<()> {
-
     // @TODO use params? https://docs.rs/clap/latest/clap/ and have switch to copy,
     //       rather than symlink
     let src_dir = "/mnt/drive/backup/pictures/years/";
@@ -129,5 +120,5 @@ fn main() -> std::io::Result<()> {
 
     println!("Welcome to picture sort");
 
-    return dir_walk("",src_dir, dst_dir);
+    return dir_walk("", src_dir, dst_dir);
 }
